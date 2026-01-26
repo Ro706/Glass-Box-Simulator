@@ -217,5 +217,3 @@ Contributions are welcome! Whether it's bug fixes, new algorithms, or UI improve
 ---
 
 
-
-**Made with ❤️ for learners everywhere. Happy learning!**

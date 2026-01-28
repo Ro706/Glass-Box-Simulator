@@ -16,6 +16,7 @@ import { SolveProblems } from '@/components/SolveProblems';
 import { AlgorithmTutor } from '@/components/AlgorithmTutor';
 import { useSimulatorStore } from '@/store/simulatorStore';
 import { useComparisonStore } from '@/store/comparisonStore';
+import { useMobileGrid } from '@/hooks/useMobileGrid';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react';
 
 const Simulator: React.FC = () => {
+  useMobileGrid();
   const { loadDemoGrid, runAlgorithm, algorithm } = useSimulatorStore();
   const { isComparisonMode, runComparison, setBaseGrid } = useComparisonStore();
   const { grid } = useSimulatorStore();
@@ -53,22 +55,22 @@ const Simulator: React.FC = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center shrink-0">
                 <Box className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">
                   Algorithmic Glass Box
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground hidden sm:block">
                   See inside pathfinding algorithms
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
               {!isComparisonMode && activeView === 'simulator' && <AlgorithmSelector />}
               
               {activeView === 'simulator' && <ComparisonToggle />}
@@ -78,10 +80,10 @@ const Simulator: React.FC = () => {
                   onClick={handleRunDemo} 
                   variant="outline" 
                   size="sm"
-                  className="gap-2"
+                  className="gap-2 shrink-0"
                 >
                   <Play className="h-4 w-4" />
-                  Run Demo
+                  <span className="hidden sm:inline">Run Demo</span>
                 </Button>
               )}
             </div>

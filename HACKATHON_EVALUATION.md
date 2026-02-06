@@ -81,6 +81,32 @@ Pathfinding algorithms are fundamental to computer science, yet teaching them re
 
 ## 4. Solution Overview
 
+### What your solution aims to achieve
+
+**Objective**: Transform algorithm education from abstract, theoretical learning into an interactive, visual, hands-on experience that empowers students to understand *why* algorithms work, not just *how* they work.
+
+**Specific Aims**:
+
+1. **Demystify Algorithms**: Move students from "algorithms are black boxes" to "I can trace every decision the algorithm makes"
+2. **Accelerate Learning**: Reduce time-to-proficiency for pathfinding algorithms from weeks to days through multimodal engagement
+3. **Build Intuition**: Enable students to predict algorithm behavior on unseen scenarios and make informed algorithm selection decisions
+4. **Improve Retention**: Leverage visual, auditory, and kinesthetic learning channels to strengthen long-term memory encoding
+5. **Democratize Education**: Provide a free, accessible, inclusive learning tool for students globally (low internet, diverse abilities, multiple learning styles)
+6. **Support Diverse Learners**: Serve visual learners (animation), auditory learners (narration), kinesthetic learners (interactive exploration), and readers (detailed notes) in one platform
+7. **Bridge Theory-to-Practice**: Connect conceptual understanding (visualization + theory) directly to real coding problems (LeetCode integration)
+8. **Empower Educators**: Give teachers and tutors an engaging, data-rich classroom tool to teach algorithms more effectively
+9. **Build Confidence**: Create a safe experimentation space where students can make mistakes, learn from them, and retry without judgment
+10. **Contribute to Inclusion**: Support DEI initiatives by lowering barriers to CS education, particularly for underrepresented groups in tech
+
+**Measurable Success Criteria**:
+- Students achieve 30% improvement in algorithm comprehension (pre/post test)
+- 80% of first-time users report "aha moments" within 15 minutes
+- 60% user return rate (students use repeatedly)
+- 40% of users report improved technical interview performance
+- 1,000+ daily active users within 6 months of launch
+
+---
+
 ### What solution is proposed?
 
 A unified, interactive web-based platform combining:
@@ -174,140 +200,36 @@ By using the platform, students will be able to:
 
 ## 7. System Architecture
 
-### How the system is designed
+### High-Level Architecture
 
-The application follows a **modular, client-side architecture** optimized for interactive visualization and real-time state management. The design separates concerns into specialized layers:
+The application follows a **modular, client-side architecture** with 4 main layers:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        USER INTERFACE LAYER                      │
-│  (React Components + Tailwind CSS + shadcn/ui)                   │
-│                                                                   │
-│  ├─ Landing Page (Index.tsx)                                     │
-│  ├─ Simulator (Simulator.tsx)                                    │
-│  │  ├─ Grid Canvas (GridCanvas.tsx)                              │
-│  │  ├─ Playback Controls (PlaybackControls.tsx)                  │
-│  │  ├─ Algorithm Selector (AlgorithmSelector.tsx)                │
-│  │  ├─ Grid Controls (GridControls.tsx)                          │
-│  │  ├─ Data Structure Viewer (DataStructureViewer.tsx)           │
-│  │  ├─ Explanation Panel (ExplanationPanel.tsx)                  │
-│  │  ├─ Text-to-Speech Module (TextToSpeech.tsx)                  │
-│  │  ├─ Metrics Display (MetricsDisplay.tsx)                      │
-│  │  ├─ Algorithm Notes (AlgorithmNotes.tsx)                      │
-│  │  ├─ Algorithm Comparison (AlgorithmComparison.tsx)            │
-│  │  ├─ LeetCode Problems (SolveProblems.tsx)                     │
-│  │  ├─ Comparison Mode (ComparisonPanel.tsx)                     │
-│  │  └─ AI Tutor (AlgorithmTutor.tsx)                             │
-│  └─ Not Found Page (NotFound.tsx)                                │
-└─────────────────────────────────────────────────────────────────┘
-              │                           │
-              ▼                           ▼
-┌──────────────────────────┐  ┌──────────────────────────┐
-│  STATE MANAGEMENT LAYER  │  │   VISUALIZATION ENGINE   │
-│  (Zustand Stores)        │  │   (HTML5 Canvas)         │
-│                          │  │                          │
-│  ├─ simulatorStore.ts    │  │  ├─ Cell rendering       │
-│  │  • Grid state         │  │  ├─ Animation frames     │
-│  │  • Algorithm steps    │  │  ├─ Color gradients      │
-│  │  • Playback state     │  │  ├─ Real-time updates    │
-│  │  • Algorithm type     │  │  └─ Path highlighting    │
-│  │  • Execution history  │  │                          │
-│  │                       │  │                          │
-│  └─ comparisonStore.ts   │  │                          │
-│     • Comparison mode    │  │                          │
-│     • Dual grids         │  │                          │
-│     • Side-by-side steps │  │                          │
-└──────────────────────────┘  └──────────────────────────┘
-              │                           │
-              ▼                           ▼
-┌──────────────────────────────────────────────────────────────┐
-│              ALGORITHM ENGINE LAYER                           │
-│  (Pure algorithmic implementations)                           │
-│                                                              │
-│  ├─ src/lib/algorithms/                                      │
-│  │  ├─ bfs.ts        (Breadth-First Search)                  │
-│  │  ├─ dfs.ts        (Depth-First Search)                    │
-│  │  ├─ dijkstra.ts   (Dijkstra's Shortest Path)              │
-│  │  ├─ astar.ts      (A* with heuristics)                    │
-│  │  ├─ utils.ts      (Shared utilities)                      │
-│  │  └─ index.ts      (Algorithm entry points)                │
-│  │                                                            │
-│  Features:                                                   │
-│  • Step-by-step execution (returns state after each step)   │
-│  • Grid initialization and validation                        │
-│  • Frontier and visited set tracking                         │
-│  • Path reconstruction                                       │
-│  • Real-time metrics (nodes explored, path length)           │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-              │                           │
-              ▼                           ▼
-┌──────────────────────────┐  ┌──────────────────────────┐
-│  CONTENT & LEARNING LAYER│  │   EXPLANATION MODULE     │
-│                          │  │   (Text + Audio)         │
-│  ├─ algorithmContent.ts  │  │                          │
-│  │  • Definitions        │  │  ├─ Step explanations    │
-│  │  • Pseudocode         │  │  ├─ Web Speech API       │
-│  │  • Code samples       │  │  ├─ Tutor templates      │
-│  │  • Flow diagrams      │  │  └─ Narration control    │
-│  │  • Use cases          │  │                          │
-│  │  • Worked examples    │  │  ExternalIntegrations:   │
-│  │                       │  │  ├─ Text-to-Speech       │
-│  └─ tutorTemplates.ts    │  │  ├─ Gemini API (opt.)    │
-│     • Guided prompts     │  │  └─ LeetCode links       │
-│     • Question templates │  │                          │
-└──────────────────────────┘  └──────────────────────────┘
-              │                           │
-              └─────────────┬─────────────┘
-                            │
-                ┌───────────▼───────────┐
-                │  EXTERNAL SERVICES    │
-                │                       │
-                ├─ LeetCode (API)       │
-                ├─ Google Gemini API    │
-                ├─ Web Speech API       │
-                └─ Browser Storage      │
-                   (localStorage)
-```
+| Layer | Key Components | Purpose |
+|-------|----------------|---------|
+| **UI Layer** | React components (GridCanvas, Playback Controls, Data Structure Viewer, Explanation Panel) | User interface and interactions |
+| **State Management** | Zustand stores (simulatorStore, comparisonStore) | Manages algorithm state, grid state, playback state |
+| **Algorithm Engine** | Pure functions (bfs.ts, dfs.ts, dijkstra.ts, astar.ts) | Step-by-step algorithm execution |
+| **Learning Layer** | Content (algorithmContent.ts), TTS, AI Tutor, LeetCode links | Educational content and support |
 
-### How components interact
+### How It Works
 
-1. **User Input → UI Layer**: User interacts with grid, controls, or selectors
-2. **UI → Store**: Component dispatches action to Zustand store (e.g., `setAlgorithm()`, `stepForward()`)
-3. **Store → Algorithm Engine**: Store triggers algorithm function (e.g., `bfs()`, `dijkstra()`)
-4. **Algorithm Engine → Store**: Engine returns next step state (grid, frontier, visited, explanation)
-5. **Store → Visualization**: Canvas component re-renders grid with updated colors
-6. **Explanation Module**: TTS reads explanation text; AI tutor answers contextual questions
-7. **External Services**: LeetCode links open in new tab; Gemini answers off-topic questions (optional)
+**Simple Data Flow**:
 
-### Data Flow Example: User Steps Algorithm Forward
+1. User interacts with UI (clicks button, draws grid)
+2. UI dispatches action to Zustand store
+3. Store calls algorithm function
+4. Algorithm returns next state (grid, frontier, explanation)
+5. Components re-render with updated visualization
+6. TTS narrates explanation; Tutor answers questions
 
-```
-User clicks "Step Forward" button
-    │
-    ├─> PlaybackControls.tsx triggers simulatorStore.stepForward()
-    │
-    ├─> simulatorStore calls algorithm(grid, state) → AlgorithmStep
-    │
-    ├─> AlgorithmStep contains:
-    │   • Updated grid (with visited/frontier/current colors)
-    │   • Current node being explored
-    │   • Frontier queue/stack/priority-queue
-    │   • Visited set
-    │   • Reconstructed path
-    │   • Human-readable explanation string
-    │
-    ├─> Store updates React state
-    │
-    ├─> Components re-render:
-    │   • GridCanvas: Recolors cells
-    │   • DataStructureViewer: Updates frontier display
-    │   • ExplanationPanel: Shows explanation text
-    │   • MetricsDisplay: Updates counter
-    │   • TextToSpeech: Speaks new explanation (if enabled)
-    │
-    └─> User sees algorithm progression
-```
+**Example**: User clicks "Step Forward" → Store calls `bfs()` → Algorithm returns next state → GridCanvas recolors cells → DataStructureViewer updates → ExplanationPanel displays text → TextToSpeech narrates
+
+### Key Integration Points
+
+- **Grid Visualization**: Canvas API renders real-time grid updates
+- **State Persistence**: Zustand manages algorithm progress across steps
+- **Audio Feedback**: Web Speech API narrates each step
+- **External Services**: LeetCode links and optional Gemini API for off-topic questions
 
 ---
 
@@ -743,6 +665,3 @@ This project aligns with Virtual Labs' mission in three ways:
 
 ---
 
-**Last Updated**: January 25, 2026  
-**Status**: Production-Ready  
-**Submitted for**: DEI × Virtual Labs Hackathon 2026

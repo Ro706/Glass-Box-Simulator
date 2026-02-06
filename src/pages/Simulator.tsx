@@ -14,6 +14,7 @@ import { AlgorithmNotes } from '@/components/AlgorithmNotes';
 import { AlgorithmComparison } from '@/components/AlgorithmComparison';
 import { SolveProblems } from '@/components/SolveProblems';
 import { AlgorithmTutor } from '@/components/AlgorithmTutor';
+import { DSANotes } from '@/components/DSANotes';
 import { useSimulatorStore } from '@/store/simulatorStore';
 import { useComparisonStore } from '@/store/comparisonStore';
 import { Button } from '@/components/ui/button';
@@ -27,14 +28,15 @@ import {
   Info,
   GraduationCap,
   Code2,
-  GitCompare
+  GitCompare,
+  BookMarked
 } from 'lucide-react';
 
 const Simulator: React.FC = () => {
   const { loadDemoGrid, runAlgorithm, algorithm } = useSimulatorStore();
   const { isComparisonMode, runComparison, setBaseGrid } = useComparisonStore();
   const { grid } = useSimulatorStore();
-  const [activeView, setActiveView] = React.useState<'simulator' | 'notes' | 'practice' | 'compare'>('simulator');
+  const [activeView, setActiveView] = React.useState<'simulator' | 'dsa-notes' | 'information' | 'practice' | 'compare'>('simulator');
 
   const handleRunDemo = () => {
     loadDemoGrid();
@@ -104,12 +106,20 @@ const Simulator: React.FC = () => {
                 Simulator
               </Button>
               <Button
-                variant={activeView === 'notes' ? 'default' : 'ghost'}
+                variant={activeView === 'dsa-notes' ? 'default' : 'ghost'}
                 className="w-full justify-start gap-2"
-                onClick={() => setActiveView('notes')}
+                onClick={() => setActiveView('dsa-notes')}
+              >
+                <BookMarked className="h-4 w-4" />
+                DSA Notes
+              </Button>
+              <Button
+                variant={activeView === 'information' ? 'default' : 'ghost'}
+                className="w-full justify-start gap-2"
+                onClick={() => setActiveView('information')}
               >
                 <GraduationCap className="h-4 w-4" />
-                Notes
+                Information
               </Button>
               <Button
                 variant={activeView === 'practice' ? 'default' : 'ghost'}
@@ -133,7 +143,13 @@ const Simulator: React.FC = () => {
           {/* Main Content Area */}
           <div className="lg:col-span-10">
             {/* Full Page Views */}
-            {activeView === 'notes' && (
+            {activeView === 'dsa-notes' && (
+              <div className="rounded-xl bg-card border border-border">
+                <DSANotes />
+              </div>
+            )}
+
+            {activeView === 'information' && (
               <div className="rounded-xl bg-card border border-border">
                 <AlgorithmNotes algorithm={algorithm} />
               </div>

@@ -534,4 +534,4 @@ You now have:
 
 ---
 
-**Happy Recording! Your 5-minute video will showcase this amazing project perfectly!** 🎬✨
+

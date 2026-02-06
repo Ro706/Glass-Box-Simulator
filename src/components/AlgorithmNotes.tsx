@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Code, Workflow, Lightbulb, GraduationCap } from 'lucide-react';
+import { Mermaid } from './Mermaid';
 
 interface AlgorithmNotesProps {
   algorithm: AlgorithmType;
@@ -68,22 +69,8 @@ export const AlgorithmNotes: React.FC<AlgorithmNotesProps> = ({ algorithm }) => 
             <CardDescription>Visual representation of the algorithm logic</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-secondary/50 p-6 rounded-lg">
-              <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                <code>{content.flowDiagram}</code>
-              </pre>
-              <p className="text-xs text-muted-foreground mt-4 italic">
-                Note: This is Mermaid diagram syntax. Copy it to{' '}
-                <a
-                  href="https://mermaid.live"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  mermaid.live
-                </a>{' '}
-                to visualize.
-              </p>
+            <div className="bg-secondary/50 rounded-lg overflow-hidden">
+              <Mermaid chart={content.flowDiagram} />
             </div>
           </CardContent>
         </Card>

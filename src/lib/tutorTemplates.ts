@@ -5,7 +5,12 @@ export type TutorIntent =
   | 'next-step'
   | 'behavior'
   | 'comparison'
-  | 'mistakes';
+  | 'mistakes'
+  | 'frontier-state'
+  | 'stop-condition'
+  | 'heuristics'
+  | 'visited-rules'
+  | 'wall-interaction';
 
 export interface TutorContext {
   algorithm: AlgorithmType;
@@ -60,11 +65,16 @@ const comparisonSnippets: Record<AlgorithmType, string> = {
 };
 
 const intentKeywords: Record<TutorIntent, string[]> = {
-  'step-reasoning': ['why', 'selected', 'choose', 'chose'],
+  'step-reasoning': ['why', 'selected', 'choose', 'chose', 'neighbor', 'reason'],
   'next-step': ['next', 'predict', 'will happen', 'expand'],
-  behavior: ['why is', 'better', 'optimal', 'path'],
+  behavior: ['why is', 'better', 'optimal', 'path', 'guarantee'],
   comparison: ['different', 'faster', 'compare', 'versus', 'vs'],
   mistakes: ['mistake', 'common', 'error', 'pitfall'],
+  'frontier-state': ['frontier', 'order', 'data structure', 'queue', 'stack', 'priority'],
+  'stop-condition': ['stop', 'finish', 'end', 'complete', 'when will'],
+  heuristics: ['heuristic', 'guiding', 'h-cost', 'manhattan'],
+  'visited-rules': ['visited', 'marked', 'already seen'],
+  'wall-interaction': ['wall', 'obstacle', 'add', 'remove', 'change grid'],
 };
 
 export const suggestedQuestions = (
@@ -87,11 +97,37 @@ export const suggestedQuestions = (
 
 export function detectIntent(question: string): TutorIntent | null {
   const q = question.toLowerCase();
-  for (const intent of Object.keys(intentKeywords) as TutorIntent[]) {
-    if (intentKeywords[intent].some((kw) => q.includes(kw))) {
-      return intent;
+  
+  // First try exact matches for suggested questions
+  const allSuggested = [
+    'bfs', 'dfs', 'dijkstra', 'astar'
+  ].flatMap(alg => suggestedQuestions(alg as AlgorithmType).map(sq => sq.question.toLowerCase()));
+  
+  if (q.includes('why was this node selected')) return 'step-reasoning';
+  if (q.includes('which node will be expanded next')) return 'next-step';
+  if (q.includes('path optimal')) return 'behavior';
+  if (q.includes('behave differently') || q.includes('vs') || q.includes('versus')) return 'comparison';
+  if (q.includes('mistakes')) return 'mistakes';
+  if (q.includes('frontier') || q.includes('ordered') || q.includes('data structure')) return 'frontier-state';
+  if (q.includes('stop') || q.includes('finish')) return 'stop-condition';
+  if (q.includes('heuristic')) return 'heuristics';
+  if (q.includes('visited')) return 'visited-rules';
+  if (q.includes('wall')) return 'wall-interaction';
+  if (q.includes('neighbor')) return 'step-reasoning';
+  if (q.includes('priority')) return 'frontier-state';
+
+  // Fallback to keyword matching if it's very likely an algorithm question
+  const algoKeywords = ['algorithm', 'node', 'grid', 'search', 'path', 'bfs', 'dfs', 'dijkstra', 'astar'];
+  const isAlgoRelated = algoKeywords.some(kw => q.includes(kw));
+  
+  if (isAlgoRelated) {
+    for (const intent of Object.keys(intentKeywords) as TutorIntent[]) {
+      if (intentKeywords[intent].some((kw) => q.includes(kw))) {
+        return intent;
+      }
     }
   }
+  
   return null;
 }
 
@@ -107,7 +143,8 @@ function describeDataStructure(step: AlgorithmStep | null): string {
     case 'stack':
       return `Top of stack is (${head.row},${head.col}) with g=${head.gCost ?? 'n/a'}.`;
     case 'priority-queue':
-      return `Min-priority item is (${head.row},${head.col}) with f=${head.fCost ?? head.priority ?? 'n/a'}.`;
+      const fVal = head.fCost ?? head.priority;
+      return `Min-priority item is (${head.row},${head.col}) with ${head.fCost !== undefined ? 'f' : 'priority'}=${fVal ?? 'n/a'}.`;
     default:
       return 'Data structure state unavailable.';
   }
@@ -141,8 +178,8 @@ export function generateAnswer(intent: TutorIntent, ctx: TutorContext): TutorAns
       return {
         intent,
         title: 'Why this node?',
-        body: `${currentNode} ${dsNote} The algorithm chooses from the frontier using its data structure (${step.dataStructure.type}).`,
-        extra: ['Nodes already visited are skipped.', 'Frontier order is dictated by the data structure (queue/stack/priority).'],
+        body: `${currentNode} ${dsNote} The algorithm chooses from the frontier using its data structure (${step.dataStructure.type}). In ${algorithm.toUpperCase()}, this choice follows specific rules (e.g., FIFO for BFS, LIFO for DFS, or lowest cost for Dijkstra/A*).`,
+        extra: ['Nodes already visited are skipped.', 'Neighbors are enqueued if they are not walls and not yet visited.'],
       };
     }
     case 'next-step': {
@@ -162,7 +199,7 @@ export function generateAnswer(intent: TutorIntent, ctx: TutorContext): TutorAns
         intent,
         title: 'Algorithm behavior',
         body: behaviorSnippets[algorithm],
-        extra: [currentNode, dsNote],
+        extra: [currentNode, dsNote, 'Optimality depends on the algorithm and grid weights.'],
       };
     }
     case 'comparison': {
@@ -177,8 +214,54 @@ export function generateAnswer(intent: TutorIntent, ctx: TutorContext): TutorAns
       return {
         intent,
         title: 'Common mistakes',
-        body: 'Watch out for these frequent errors:',
+        body: 'Watch out for these frequent errors when implementing this algorithm:',
         extra: mistakesByAlgorithm[algorithm],
+      };
+    }
+    case 'frontier-state': {
+      return {
+        intent,
+        title: 'Frontier Status',
+        body: `The frontier is currently managed by a ${step.dataStructure.type}. ${dsNote}`,
+        extra: [
+          `BFS uses a Queue (FIFO).`,
+          `DFS uses a Stack (LIFO).`,
+          `Dijkstra/A* use a Priority Queue (Lowest cost first).`
+        ],
+      };
+    }
+    case 'stop-condition': {
+      return {
+        intent,
+        title: 'When will it stop?',
+        body: 'The algorithm stops when the goal node is reached or the frontier becomes empty (no path found).',
+        extra: ['Reaching the goal triggers path reconstruction.', 'Empty frontier means the goal is unreachable from the start.'],
+      };
+    }
+    case 'heuristics': {
+      return {
+        intent,
+        title: 'Heuristics & Guidance',
+        body: algorithm === 'astar' 
+          ? 'A* uses Manhattan distance (typically) as a heuristic to estimate the remaining cost to the goal. This guides it to expand nodes that look promising.'
+          : 'This algorithm does not use heuristics; it explores based on actual distance or search order.',
+        extra: algorithm === 'astar' ? ['f = g + h', 'Admissible heuristics never overestimate.'] : [],
+      };
+    }
+    case 'visited-rules': {
+      return {
+        intent,
+        title: 'Visited vs Frontier',
+        body: 'A node is in the frontier when it is "seen" but not yet "explored". Once it is explored, it is moved to the visited set.',
+        extra: ['Visited nodes are usually colored differently on the grid.', 'Nodes in the visited set will not be added to the frontier again.'],
+      };
+    }
+    case 'wall-interaction': {
+      return {
+        intent,
+        title: 'Walls and Obstacles',
+        body: 'Walls block the algorithm. When the algorithm checks neighbors, it skips any node marked as a wall.',
+        extra: ['Adding a wall during execution might invalidate the current frontier.', 'Removing a wall could open a shorter path.'],
       };
     }
     default:
@@ -189,3 +272,4 @@ export function generateAnswer(intent: TutorIntent, ctx: TutorContext): TutorAns
       };
   }
 }
+

@@ -34,7 +34,7 @@ export const GridControls: React.FC = () => {
       {/* Draw mode selector */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-muted-foreground">Draw Mode</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {drawModes.map((mode) => {
             const Icon = mode.icon;
             const isSelected = drawMode === mode.id;
@@ -47,13 +47,13 @@ export const GridControls: React.FC = () => {
                 onClick={() => setDrawMode(mode.id)}
                 disabled={isRunning}
                 className={cn(
-                  "gap-2 justify-start",
+                  "gap-2 justify-start w-full",
                   isSelected && "ring-2 ring-ring ring-offset-2"
                 )}
               >
-                <div className={cn("w-3 h-3 rounded-sm", mode.color)} />
-                <Icon className="h-4 w-4" />
-                <span>{mode.label}</span>
+                <div className={cn("w-3 h-3 rounded-sm shrink-0", mode.color)} />
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{mode.label}</span>
               </Button>
             );
           })}
@@ -71,8 +71,8 @@ export const GridControls: React.FC = () => {
             disabled={isRunning}
             className="gap-2 justify-start"
           >
-            <Shuffle className="h-4 w-4" />
-            Random Maze
+            <Shuffle className="h-4 w-4 shrink-0" />
+            <span className="truncate">Random Maze</span>
           </Button>
           <Button
             variant="outline"
@@ -81,8 +81,8 @@ export const GridControls: React.FC = () => {
             disabled={isRunning}
             className="gap-2 justify-start"
           >
-            <Trash2 className="h-4 w-4" />
-            Clear Walls
+            <Trash2 className="h-4 w-4 shrink-0" />
+            <span className="truncate">Clear Walls</span>
           </Button>
           <Button
             variant="outline"
@@ -91,8 +91,8 @@ export const GridControls: React.FC = () => {
             disabled={isRunning}
             className="gap-2 justify-start"
           >
-            <RotateCcw className="h-4 w-4" />
-            Reset Grid
+            <RotateCcw className="h-4 w-4 shrink-0" />
+            <span className="truncate">Reset Grid</span>
           </Button>
         </div>
       </div>

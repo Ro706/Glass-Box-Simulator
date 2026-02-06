@@ -3,12 +3,19 @@ import { useSimulatorStore } from '@/store/simulatorStore';
 import { detectIntent, generateAnswer, suggestedQuestions, TutorAnswer, TutorIntent } from '@/lib/tutorTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +32,7 @@ import {
   PlayCircle,
   Activity,
   Loader2,
+  Settings
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -34,7 +42,12 @@ interface ChatMessage {
   source?: 'template' | 'gemini';
 }
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+const MODELS = [
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Recommended)' },
+  { id: 'gemini-1.5-flash-latest', name: 'Gemini 1.5 Flash (Latest)' },
+  { id: 'gemini-pro', name: 'Gemini 1.0 Pro' },
+  { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro (Explicit)' },
+];
 
 export const AlgorithmTutor: React.FC = () => {
   const { algorithm, steps, currentStep, isRunning, isPaused } = useSimulatorStore();
@@ -42,6 +55,25 @@ export const AlgorithmTutor: React.FC = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return (import.meta.env.VITE_GEMINI_API_KEY as string) || localStorage.getItem('gemini_api_key') || '';
+  });
+
+  const [model, setModel] = useState<string>(() => {
+    return localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+  });
+
+  const handleSaveKey = (key: string) => {
+    setApiKey(key);
+    localStorage.setItem('gemini_api_key', key);
+  };
+
+  const handleSaveModel = (m: string) => {
+    setModel(m);
+    localStorage.setItem('gemini_model', m);
+  };
 
   const stepData = currentStep >= 0 ? steps[currentStep] : null;
   const stepIndex = currentStep >= 0 ? currentStep : 0;
@@ -61,22 +93,20 @@ export const AlgorithmTutor: React.FC = () => {
     if (!question.trim()) return;
     const intent = detectIntent(question);
 
-    // Always store the user question first
     setMessages((prev) => [...prev, { role: 'user', text: question }]);
     setInput('');
 
-    // Off-topic → try Gemini fallback if key is present
     if (!intent) {
-      if (!GEMINI_API_KEY) {
+      if (!apiKey) {
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            text: 'I can answer about the current algorithm. Provide a Gemini API key via VITE_GEMINI_API_KEY to enable open questions.',
+            text: 'Please provide a Gemini API Key to enable open-ended questions.',
             answer: {
               intent: 'fallback',
-              title: 'No Gemini key set',
-              body: 'Set VITE_GEMINI_API_KEY to answer off-track questions with Gemini.',
+              title: 'API Key Required',
+              body: 'Enter your Gemini API key in settings to continue.',
             },
             source: 'template',
           },
@@ -85,18 +115,18 @@ export const AlgorithmTutor: React.FC = () => {
       }
 
       setIsThinking(true);
-      void fetchGeminiAnswer(question, contextSummary).then((resp) => {
+      void fetchGeminiAnswer(question, contextSummary, apiKey, model).then((resp) => {
         setIsThinking(false);
         if (!resp) {
           setMessages((prev) => [
             ...prev,
             {
               role: 'assistant',
-              text: 'I could not reach Gemini. Please try again or ask an algorithm-related question.',
+              text: `I could not reach Gemini (${model}). Check your key or try a different model in settings.`,
               answer: {
                 intent: 'fallback',
-                title: 'Gemini unavailable',
-                body: 'Network or key issue. Try again.',
+                title: 'Connection Error',
+                body: 'Failed to fetch response. Verify your key and model selection.',
               },
               source: 'template',
             },
@@ -120,7 +150,6 @@ export const AlgorithmTutor: React.FC = () => {
       return;
     }
 
-    // On-topic → template-based tutor answer
     const answer = generateAnswer(intent as TutorIntent, contextSummary);
     setMessages((prev) => [
       ...prev,
@@ -132,45 +161,49 @@ export const AlgorithmTutor: React.FC = () => {
     ? `${stepData.dataStructure.type} · Frontier ${stepData.dataStructure.items.length} · Visited ${stepData.visited.length}`
     : 'No steps yet — run the simulator';
   
-    const frontierSummary = stepData?.dataStructure?.items
-      ?.slice(0, 5)
-      .map((n) => `(${n.row},${n.col})`)
-      .join(', ');
+  const frontierSummary = stepData?.dataStructure?.items
+    ?.slice(0, 5)
+    .map((n) => `(${n.row},${n.col})`)
+    .join(', ');
   
-    async function fetchGeminiAnswer(question: string, ctx: typeof contextSummary): Promise<string | null> {
-      try {
-        const prompt = `You are Algorithm Tutor. Be concise and helpful. If the question is unrelated to algorithms, answer briefly and politely.
-  Context:
-  - Algorithm: ${ctx.algorithm}
-  - Step index: ${ctx.stepIndex}
-  - Current node: ${ctx.step?.currentNode ? `(${ctx.step.currentNode.row},${ctx.step.currentNode.col})` : 'none'}
-  - Frontier type: ${ctx.step?.dataStructure.type ?? 'n/a'}
-  - Frontier head: ${ctx.step?.dataStructure.items?.[0] ? `(${ctx.step.dataStructure.items[0].row},${ctx.step.dataStructure.items[0].col})` : 'empty'}
-  - Frontier sample: ${frontierSummary ?? 'empty'}
-  - Visited count: ${ctx.step?.visited.length ?? 0}
-  - Is running: ${ctx.isRunning}
-  - Is paused: ${ctx.isPaused}
-  Question: ${question}
-  Keep answers under 80 words.`;
-  
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-          },
-        );
-  
-        if (!res.ok) return null;
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
-        return text ?? null;
-      } catch (err) {
-        console.error('Gemini error', err);
+  async function fetchGeminiAnswer(question: string, ctx: typeof contextSummary, key: string, modelId: string): Promise<string | null> {
+    try {
+      const prompt = `You are Algorithm Tutor. Be concise and helpful. If the question is unrelated to algorithms, answer briefly and politely.
+Context:
+- Algorithm: ${ctx.algorithm}
+- Step index: ${ctx.stepIndex}
+- Current node: ${ctx.step?.currentNode ? `(${ctx.step.currentNode.row},${ctx.step.currentNode.col})` : 'none'}
+- Frontier type: ${ctx.step?.dataStructure.type ?? 'n/a'}
+- Frontier head: ${ctx.step?.dataStructure.items?.[0] ? `(${ctx.step.dataStructure.items[0].row},${ctx.step.dataStructure.items[0].col})` : 'empty'}
+- Frontier sample: ${frontierSummary ?? 'empty'}
+- Visited count: ${ctx.step?.visited.length ?? 0}
+- Is running: ${ctx.isRunning}
+- Is paused: ${ctx.isPaused}
+Question: ${question}
+Keep answers under 80 words.`;
+
+      // Use v1beta by default
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        },
+      );
+
+      if (!res.ok) {
+        console.error('Gemini API Error:', res.status, res.statusText);
         return null;
       }
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+      return text ?? null;
+    } catch (err) {
+      console.error('Gemini error', err);
+      return null;
     }
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -183,11 +216,57 @@ export const AlgorithmTutor: React.FC = () => {
         </DrawerTrigger>
         <DrawerContent className="h-[80vh]">
           <DrawerHeader className="space-y-2">
-            <DrawerTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Algorithm Tutor
-            </DrawerTitle>
-            <DrawerDescription className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex items-center justify-between">
+              <DrawerTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Algorithm Tutor
+              </DrawerTitle>
+              <Button 
+                variant={showSettings ? "secondary" : "ghost"} 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => setShowSettings(!showSettings)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {showSettings && (
+              <div className="p-3 rounded-md bg-secondary/50 border space-y-3 animate-fade-in">
+                <div className="space-y-1">
+                  <Label htmlFor="apiKey" className="text-xs">Gemini API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => handleSaveKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="model" className="text-xs">AI Model</Label>
+                  <Select value={model} onValueChange={handleSaveModel}>
+                    <SelectTrigger id="model" className="h-8 text-xs">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODELS.map(m => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    Try a different model if you get 404 errors.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Replaced DrawerDescription with div to fix nesting warning */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline">Algorithm: {algorithm.toUpperCase()}</Badge>
               <Badge variant="outline">Step: {currentStep >= 0 ? currentStep + 1 : '—'}</Badge>
               <Badge variant="outline" className={cn(isPaused ? 'text-yellow-600' : isRunning ? 'text-green-600' : 'text-muted-foreground')}>
@@ -198,14 +277,13 @@ export const AlgorithmTutor: React.FC = () => {
                   Current node ({stepData.currentNode.row},{stepData.currentNode.col})
                 </Badge>
               )}
-            </DrawerDescription>
+            </div>
             <p className="text-xs text-muted-foreground">{currentStatus}</p>
           </DrawerHeader>
 
           <Separator />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 px-4 pb-4 h-full">
-            {/* Chat area */}
             <div className="lg:col-span-2 flex flex-col gap-3 border rounded-lg bg-card">
               <ScrollArea className="flex-1 p-4 space-y-4 max-h-[50vh]">
                 {messages.length === 0 && (
@@ -260,7 +338,6 @@ export const AlgorithmTutor: React.FC = () => {
               </form>
             </div>
 
-            {/* Suggested prompts */}
             <div className="space-y-3 border rounded-lg p-3 bg-card/60">
               <h4 className="text-sm font-semibold flex items-center gap-2">
                 <Activity className="h-4 w-4" />
